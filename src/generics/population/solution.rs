@@ -6,4 +6,6 @@ pub trait Solution<G: Clone + Copy, P: Clone + Copy> {
     fn get_ptype(&self) -> &P;
     fn induce_gtype(&mut self) -> ();
     fn induce_ptype(&mut self) -> ();
+    fn update_fitness(&mut self) -> ();
+    fn get_fitness(&self) -> f32;
 }
