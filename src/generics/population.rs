@@ -6,8 +6,7 @@ pub trait Solution<G: Clone + Copy, P: Clone + Copy> {
     fn get_ptype(&self) -> &P;
     fn induce_gtype(&mut self) -> ();
     fn induce_ptype(&mut self) -> ();
-    fn update_fitness(&mut self) -> ();
-    fn get_fitness(&self) -> f32;
+    fn clear(&mut self) -> ();
 }
 
 pub trait Population<G: Clone + Copy, P: Clone + Copy> {
@@ -15,12 +14,7 @@ pub trait Population<G: Clone + Copy, P: Clone + Copy> {
     fn get(&self, n: &usize) -> &Solution<G,P>;
     fn set(&mut self, n: &usize, soln: Solution<G,P>) -> ();
     fn len(&self) -> usize;
-    fn get_fitnesses(&self) -> Vec<f32>;
-    fn get_fitness(&self) -> f32;
-    fn get_diversity(&self) -> f32;
-    fn get_age(&self) -> f32;
-    fn update_fitness(&mut self, n: &usize) -> ();
-    fn update_diversity(&mut self);
+    fn get_age(&self) -> &f32;
     fn add(&mut self, soln: Solution<G,P>) -> ();
     fn rem(&mut self, n: &usize) -> ();
     fn inc_age(&mut self) -> ();

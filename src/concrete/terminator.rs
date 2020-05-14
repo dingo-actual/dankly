@@ -70,11 +70,19 @@ impl Terminator for GeneralTerminator {
         }
         return False;
     }
-    fn update(&mut self, pop: &Population<G,P>) -> () {
+    fn update(&mut self, fitnesses: Vec<f32>, diversity: f32, age: f32) -> () {
         self.crnt_iter = self.crnt_iter + 1;
+        self.crnt_diversity = diversity;
+        self.crnt_age = pop.age;
         self.last_fitness = self.crnt_fitness.copy();
-        self.crnt_fitness = pop.get_fitness();
-        self.crnt_diversity = pop.get_diversity();
-        self.crnt_age = pop.get_age();
+        
+        //compute mean of fitnesses
+        self.crnt_fitness = 0;
+        let mut denom = 0;
+        for fit in fitnesses.iter() {
+            self.crnt_fitness = self.crnt_fitness + fit;
+            denom = denom + 1;
+        }
+        self.crnt_fitness = self.crnt_fitness / denom;
     }
 }
