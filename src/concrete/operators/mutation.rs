@@ -1,1 +1,1 @@
-use crate::generics::operators::mutation::Mutation;
+use crate::generics::operators::Mutation;

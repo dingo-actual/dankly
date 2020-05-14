@@ -1,5 +1,5 @@
 use crate::generics::terminator::Terminator;
-use crate::generics::metrics::population::Population;
+use crate::generics::population::Population;
 
 pub struct GeneralTerminator {
     progress_rtol: Option<f32>,

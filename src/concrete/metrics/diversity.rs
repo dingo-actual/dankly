@@ -1,1 +1,1 @@
-use crate::generics::metrics::diversity::Diversity;
+use crate::generics::metrics::Diversity;

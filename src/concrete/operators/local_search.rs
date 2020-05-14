@@ -1,1 +1,1 @@
-use crate::generics::operators::local_search::LocalSearch;
+use crate::generics::operators::LocalSearch;
