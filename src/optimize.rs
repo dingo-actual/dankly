@@ -42,6 +42,7 @@ fn optimize<G: Clone + Copy, P: Clone + Copy>(pop: &Population<G,P>, fitness: &F
         for ix in survivor_ixs.iter() {
             survivors.push(pop.get(ix).clone());
         }
+        pop.clear();
         while let Some(survivor) = survivors.pop() {
             pop.add(survivor);
         }

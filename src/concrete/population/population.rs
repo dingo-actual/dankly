@@ -5,7 +5,7 @@ struct GeneralPopulation<G: Clone + Copy, P: Clone + Copy> {
     age: f32,
 }
 
-impl Population for GeneralPopulation {
+impl Population<G, P> for GeneralPopulation {
     fn new() -> GeneralPopulation<G,P> {
         GeneralPopulation {
             solutions: Vec::new(),
