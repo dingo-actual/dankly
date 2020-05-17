@@ -1,7 +1,8 @@
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Sub, Mul, Div, BitAnd, BitOr, BitXor, Not};
 use crate::generics::population::Solution;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use rand::distributions::{Bernoulli, Distribution};
 use rand_distr::{Normal, Uniform, Distribution};
 
 //permutation
@@ -95,7 +96,7 @@ pub struct SolnIdentPermu {
 }
 
 impl SolnIdentPermu {
-    fn new(len: &usize) {
+    pub fn new(len: &usize) -> SolnIdentPermu {
         let perm = Permutation::new();
         SolnIdentPermu {
             gtype: perm,
@@ -522,6 +523,38 @@ impl BoundedRealVec {
     }
 }
 
+impl SolnIdentBoundedRealVec {
+    fn new_from(len: &usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>, realvec: &BoundedRealVec) -> SolnIdentBoundedRealVec {
+        SolnIdentBoundedRealVec {
+            gtype: *realvec.copy(),
+            ptype: *realvec.copy(),
+            len: len,
+            ubounds: *ubounds.copy(),
+            lbounds: *lbounds.copy(),
+        }
+    }
+    pub fn new(len: &usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> SolnIdentBoundedRealVec {
+        let realvec = BoundedRealVec::new(len, lbounds, ubounds);
+        SolnIdentBoundedRealVec::new_from(len, lbounds, ubounds, &realvec)
+    }
+    pub fn new_lo(len: &usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> SolnIdentBoundedRealVec {
+        let realvec = BoundedRealVec::new_lo(len, lbounds, ubounds);
+        SolnIdentBoundedRealVec::new_from(len, lbounds, ubounds, &realvec)
+    }
+    pub fn new_hi(len: &usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> SolnIdentBoundedRealVec {
+        let realvec = BoundedRealVec::new_hi(len, lbounds, ubounds);
+        SolnIdentBoundedRealVec::new_from(len, lbounds, ubounds, &realvec)
+    }
+    pub fn new_normal(len: &usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> SolnIdentBoundedRealVec {
+        let realvec = BoundedRealVec::new_normal(len, lbounds, ubounds);
+        SolnIdentBoundedRealVec::new_from(len, lbounds, ubounds, &realvec)
+    }
+    pub fn new_uniform(len: &usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> SolnIdentBoundedRealVec {
+        let realvec = BoundedRealVec::new_uniform(len, lbounds, ubounds);
+        SolnIdentBoundedRealVec::new_from(len, lbounds, ubounds, &realvec)
+    }
+}
+
 impl Solution<BoundedRealVec, BoundedRealVec> for SolnIdentBoundedRealVec {
     fn set_gtype(&mut self, gtype_new: &BoundedRealVec) -> () {
         self.gtype.set(gtype_new);
@@ -544,5 +577,165 @@ impl Solution<BoundedRealVec, BoundedRealVec> for SolnIdentBoundedRealVec {
 }
 
 //binary string
+
+#[derive(Clone, Copy)]
+struct BinarySeq {
+    len: usize,
+    seq: Vec<bool>,
+}
+
+pub struct SolnIdentBinarySeq {
+    gtype: BinarySeq,
+    ptype: BinarySeq,
+    len: usize,
+}
+
+impl BinarySeq {
+    fn check_compatible(&self, other: &BinarySeq) {
+        return self.len == other.len;
+    }
+    fn new_from(len: &usize, seq: Vec<bool>) {
+        BinarySeq {
+            len: len,
+            seq: seq,
+        }
+    }
+    pub fn new(len: &usize) -> BinarySeq {
+        let seq = Vec::with_capacity(len);
+        BinarySeq::new_from(len, seq)
+    }
+    pub fn new_true(len: &usize) -> BinarySeq {
+        let seq = vec![true, len];
+        BinarySeq::new_from(len, seq)
+    }
+    pub fn new_false(len: &usize) -> BinarySeq {
+        let seq = vec![false, len];
+        BinarySeq::new_from(len, seq)
+    }
+    pub fn new_random(len: &usize, p: &f32) {
+        if p < 0 || p > 1 {
+            panic!("Invalid probability")
+        }
+        let rng = rand::thread_rng();
+        let bern = Bernoulli::new(p).unwrap();
+        let seq = bern.sample_iter(rng).take(len).collect();
+        BinarySeq::new_from(len, seq)
+    }
+    pub fn parity(&self) -> bool {
+        self.seq.iter().fold(false, |acc, x| acc ^ x)
+    }
+    pub fn count(&self) -> usize {
+        self.seq.iter().filter(|&x| x).count()
+    }
+    pub fn set(&mut self, other: &BinarySeq) -> () {
+        if !self.check_compatible(other) {
+            panic!("Attempted set with mismatching shapes")
+        }
+        for n in 0..self.len {
+            self.seq[n] = other.seq[n].copy();
+        }
+    }
+}
+
+impl BitAnd for BinarySeq {
+    type Output = Self;
+
+    fn bitand(&self, rhs: &BinarySeq) -> Self::Output {
+        if !self.check_compatible(rhs) {
+            panic!("Attempted AND on incompatible shapes")
+        }
+        let mut out = Vec::with_capacity(self.len);
+        for (x1, x2) in self.seq.iter().zip(other.seq.iter()) {
+            out.push(x1 && x2);
+        }
+        BinarySeq {
+            len: self.len,
+            seq: out,
+        }
+    }
+}
+
+impl BitOr for BinarySeq {
+    type Output = Self;
+
+    fn bitor(&self, rhs: &BinarySeq) -> Self::Output {
+        if !self.check_compatible(rhs) {
+            panic!("Attempted OR on incompatible shapes")
+        }
+        let mut out = Vec::with_capacity(self.len);
+        for (x1, x2) in self.seq.iter().zip(other.seq.iter()) {
+            out.push(x1 || x2);
+        }
+        BinarySeq {
+            len: self.len,
+            seq: out,
+        }
+    }
+}
+
+impl BitXor for BinarySeq {
+    type Output = Self;
+
+    fn bitxor(&self, rhs: &BinarySeq) -> Self::Output {
+        if !self.check_compatible(rhs) {
+            panic!("Attempted XOR on incompatible shapes")
+        }
+        let mut out = Vec::with_capacity(self.len);
+        for (x1, x2) in self.seq.iter().zip(other.seq.iter()) {
+            out.push(x1 ^ x2);
+        }
+        BinarySeq {
+            len: self.len,
+            seq: out,
+        }
+    }
+}
+
+impl SolnIdentBinarySeq {
+    fn new_from(len: &usize, seq: BinarySeq) {
+        SolnIdentBinarySeq {
+            len: len,
+            gtype: seq.copy(),
+            ptype: seq.copy(),
+        }
+    }
+    pub fn new(len: &usize) -> SolnIdentBinarySeq {
+        let seq = BinarySeq::new(len);
+        SolnIdentBinarySeq::new_from(len, seq)
+    }
+    pub fn new_true(len: &usize) -> SolnIdentBinarySeq {
+        let seq = BinarySeq::new_true(len);
+        SolnIdentBinarySeq::new_from(len, seq)
+    }
+    pub fn new_false(len: &usize) -> SolnIdentBinarySeq {
+        let seq = BinarySeq::new_false(len);
+        SolnIdentBinarySeq::new_from(len, seq)
+    }
+    pub fn new_random(len: &usize, p: &f32) -> SolnIdentBinarySeq {
+        let seq = BinarySeq::new_random(len, p);
+        SolnIdentBinarySeq::new_from(len, seq)
+    }
+}
+
+impl Solution for SolnIdentBinarySeq {
+    fn set_gtype(&mut self, gtype_new: &BinarySeq) -> () {
+        self.gtype.set(gtype_new);
+    }
+    fn set_ptype(&mut self, ptype_new: &BinarySeq) -> () {
+        self.ptype.set(ptype_new);
+    }
+    fn get_gtype(&self) -> &BoundedRealVec {
+        &self.gtype
+    }
+    fn get_ptype(&self) -> &BoundedRealVec {
+        &self.ptype
+    }
+    fn induce_gtype(&mut self) -> () {
+        self.gtype = self.ptype.copy();
+    }
+    fn induce_ptype(&mut self) -> () {
+        self.ptype = self.gtype.copy();
+    }
+}
 
 //categorical sequence
