@@ -299,8 +299,16 @@ pub struct BoundedRealVec {
     lbounds: Vec<f32>,
 }
 
+pub struct SolnIdentBoundedRealVec {
+    gtype: BoundedRealVec,
+    ptype: BoundedRealVec,
+    len: usize,
+    ubounds: Vec<f32>,
+    lbounds: Vec<f32>,
+}
+
 impl Add<BoundedRealVec> for BoundedRealVec {
-    type Output = Option<BoundedRealVec>;
+    type Output = BoundedRealVec;
 
     fn add(&self, other: &BoundedRealVec) -> BoundedRealVec {
         if !self.check_compatible(other) {
@@ -320,53 +328,72 @@ impl Add<BoundedRealVec> for BoundedRealVec {
     }
 }
 
-impl Sub<RealVec> for RealVec {
-    type Output = Option<RealVec>;
+impl Sub<BoundedRealVec> for BoundedRealVec {
+    type Output = BoundedRealVec;
 
-    fn sub(self, other: RealVec) -> Option<RealVec> {
-        if self.len != other.len {
-            return None;
+    fn sub(&self, other: &BoundedRealVec) -> BoundedRealVec {
+        if !self.check_compatible(other) {
+            panic!("Tried to subtract incompatible bounded vectors")
         }
         let mut out = Vec::with_capacity(self.len);
         for (x1, x2) in self.seq.iter().zip(other.seq.iter()) {
             out.push(x1 - x2);
         }
-        Some(RealVec{len: self.len, seq: out})
+        self.clip(&mut out, &self.lbounds, &self.hbounds);
+        BoundedRealVec{
+            len: self.len, 
+            seq: out,
+            lbounds: *self.lbounds.copy(),
+            hbounds: *self.hbounds.copy(),
+        }
     }
 }
 
-impl Mul<RealVec> for RealVec {
-    type Output = Option<RealVec>;
+impl Mul<BoundedRealVec> for BoundedRealVec {
+    type Output = BoundedRealVec;
 
-    fn mul(self, rhs: RealVec) -> Option<RealVec> {
-        if self.len != rhs.len {
-            return None;
+    fn mul(&self, rhs: &BoundedRealVec) -> BoundedRealVec {
+        if !self.check_compatible(rhs) {
+            panic!("Tried to multiply incompatible bounded vectors")
         }
         let mut out = Vec::with_capacity(self.len);
         for (x1, x2) in self.seq.iter().zip(rhs.seq.iter()) {
             out.push(x1 * x2);
         }
-        Some(RealVec{len: self.len, seq: out})
+        self.clip(&mut out, &self.lbounds, &self.hbounds);
+        BoundedRealVec{
+            len: self.len, 
+            seq: out,
+            lbounds: *self.lbounds.copy(),
+            hbounds: *self.hbounds.copy(),
+        }
     }
 }
 
-impl Div<RealVec> for RealVec {
-    type Output = Option<RealVec>;
+impl Div<BoundedRealVec> for BoundedRealVec {
+    type Output = BoundedRealVec;
 
-    fn div(self, rhs: RealVec) -> Option<RealVec> {
-        if self.len != rhs.len {
-            return None;
+    fn div(&self, rhs: &BoundedRealVec) -> BoundedRealVec {
+        if !self.check_compatible(rhs) {
+            panic!("Tried to divide incompatible bounded vectors")
         }
         if rhs.seq.iter().map(|x| x != 0).any() {
-            return None;
+            panic!("Division by zero")
         }
         let mut out = Vec::with_capacity(self.len);
         for (x1, x2) in self.seq.iter().zip(rhs.seq.iter()) {
-            out.push(x1 / x2);
+            out.push(x1 * x2);
         }
-        Some(RealVec{len: self.len, seq: out})
+        self.clip(&mut out, &self.lbounds, &self.hbounds);
+        BoundedRealVec{
+            len: self.len, 
+            seq: out,
+            lbounds: *self.lbounds.copy(),
+            hbounds: *self.hbounds.copy(),
+        }
     }
 }
+
 
 impl BoundedRealVec {
     fn check_compatible(&self, other: &BoundedRealVec) -> bool {
@@ -385,7 +412,7 @@ impl BoundedRealVec {
         }
         True
     }
-    fn check_bounds(len: usize, ubounds: &Vec<f32>, lbounds: &Vec<f32>) -> bool {
+    fn check_bounds(len: usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> bool {
         if ubounds.len() != len || lbounds.len() != len {
             return False
         }
@@ -396,29 +423,29 @@ impl BoundedRealVec {
         }
         True
     }
-    fn clip(seq: &mut Vec<f32>, lbounds: &Vec<f32>, hbounds: &Vec<f32>) -> () {
+    fn clip(seq: &mut Vec<f32>, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> () {
         for n in 0..seq.len() {
             if seq[n] < lbounds[n] {
                 seq[n] = lbounds[n];
-            } else if seq[n] > hbounds[n] {
-                seq[n] = hbounds[n];
+            } else if seq[n] > ubounds[n] {
+                seq[n] = ubounds[n];
             }
         }
     }
-    fn bounded_normal(lbound: &f32, hbound: &f32) -> f32 {
+    fn bounded_normal(lbound: &f32, ubound: &f32) -> f32 {
         let rng = thread_rng();
-        let mu = (hbound + lbound) / 2;
+        let mu = (ubound + lbound) / 2;
         let sigma = (hbound - lbound) / 4;
         let normal = Normal::new(mu, sigma).unwrap();
         let mut samp = normal.sample(&mut rng);
-        while samp < lbound || samp > hbound {
+        while samp < lbound || samp > ubound {
             samp = normal.sample(&mut rng);
         }
         samp;
 
     }
-    pub fn new(len: usize, ubounds: &Vec<f32>, lbounds: &Vec<f32>) -> RealVec {
-        if !self.check_bounds(len, ubounds, lbounds) {
+    pub fn new(len: usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> RealVec {
+        if !self.check_bounds(len, lbounds, ubounds) {
             panic!("Invalid bounds");
         }
         BoundedRealVec{
@@ -428,8 +455,8 @@ impl BoundedRealVec {
             lbounds: *lbounds.copy(),
         }
     }
-    pub fn new_lo(len: usize, ubounds: &Vec<f32>, lbounds: &Vec<f32>) -> BoundedRealVec {
-        if !self.check_bounds(len, ubounds, lbounds) {
+    pub fn new_lo(len: usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> BoundedRealVec {
+        if !self.check_bounds(len, lbounds, ubounds) {
             panic!("Invalid bounds");
         }
         BoundedRealVec{
@@ -439,8 +466,8 @@ impl BoundedRealVec {
             lbounds: *lbounds.copy(),
         }
     }
-    pub fn new_hi(len: usize, ubounds: &Vec<f32>, lbounds: &Vec<f32>) -> BoundedRealVec {
-        if !self.check_bounds(len, ubounds, lbounds) {
+    pub fn new_hi(len: usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> BoundedRealVec {
+        if !self.check_bounds(len, lbounds, ubounds) {
             panic!("Invalid bounds");
         }
         BoundedRealVec{
@@ -450,8 +477,8 @@ impl BoundedRealVec {
             lbounds: *lbounds.copy(),
         }
     }
-    fn new_normal(len: usize, ubounds: &Vec<f32>, lbounds: &Vec<f32>) -> BoundedRealVec {
-        if ! self.check_bounds(len, ubounds, lbounds) {
+    pub fn new_normal(len: usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> BoundedRealVec {
+        if ! self.check_bounds(len, lbounds, ubounds) {
             panic!("Invalid bounds");
         }
         let mut out = Vec::with_capacity(len);
@@ -465,20 +492,54 @@ impl BoundedRealVec {
             lbounds: *lbounds.copy(),
         }
     }
-    fn new_uniform(len: usize, lo: f32, hi: f32) -> RealVec {
+    pub fn new_uniform(len: usize, lbounds: &Vec<f32>, ubounds: &Vec<f32>) -> RealVec {
+        if !self.check_bounds(len, lbounds, ubounds) {
+            panic!("Invalid bounds");
+        }
         let rng = thread_rng();
-        let unif = Uniform::new_inclusive(lo, hi);
-        let out: Vec<f32> = Uniform.sample_iter(rng).take(len).collect();
-        RealVec{len: len, seq: out}
+        let unif = Uniform::new_inclusive(0, 1);
+        let mut out = Vec::with_capacity(len);
+        for n in 0..len {
+            let samp = unif.sample(&mut rng);
+            let scaled_samp = lbounds[n] + samp * (ubounds[n] - lbounds[n]);
+            out.push(scaled_samp);
+        }
+        BoundedRealVec{
+            len: len,
+            seq: out,
+            ubounds: *ubounds.copy(),
+            lbounds: *lbounds.copy(),
+        }
     }
-    fn set(&mut self, other: &RealVec) -> Result<&usize, &str> {
-        if self.len != other.len {
-            return Err("Incompatible shapes");
+    pub fn set(&mut self, other: &BoundedRealVec) -> () {
+        if self.check_compatible(other) {
+            panic!("Set with incompatible shapes");
         }
         for n in 0..self.shape {
             self.seq[n] = other.seq[n].copy();
         }
-        return Ok(&self.len)
+        self.clip(&mut self.seq, &self.lbounds, &self.ubounds);
+    }
+}
+
+impl Solution<BoundedRealVec, BoundedRealVec> for SolnIdentBoundedRealVec {
+    fn set_gtype(&mut self, gtype_new: &BoundedRealVec) -> () {
+        self.gtype.set(gtype_new);
+    }
+    fn set_ptype(&mut self, ptype_new: &BoundedRealVec) -> () {
+        self.ptype.set(ptype_new);
+    }
+    fn get_gtype(&self) -> &BoundedRealVec {
+        &self.gtype
+    }
+    fn get_ptype(&self) -> &BoundedRealVec {
+        &self.ptype
+    }
+    fn induce_gtype(&mut self) -> () {
+        self.gtype = self.ptype.copy();
+    }
+    fn induce_ptype(&mut self) -> () {
+        self.ptype = self.gtype.copy();
     }
 }
 
