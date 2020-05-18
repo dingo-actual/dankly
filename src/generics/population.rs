@@ -1,4 +1,4 @@
-pub trait Solution<G: Clone + Copy, P: Clone + Copy> {
+pub trait Solution<G: Genotype, P: Phenotype> {
     fn set_gtype(&mut self, gtype_new: &G) -> ();
     fn set_ptype(&mut self, ptype_new: &P) -> ();
     fn get_gtype(&self) -> &G;
@@ -7,7 +7,7 @@ pub trait Solution<G: Clone + Copy, P: Clone + Copy> {
     fn induce_ptype(&mut self) -> ();
 }
 
-pub trait Population<G: Clone + Copy, P: Clone + Copy> {
+pub trait Population<G: Genotype, P: Phenotype> {
     fn new(n: &usize) -> Self;
     fn get(&self, n: &usize) -> &Solution<G,P>;
     fn set(&mut self, n: &usize, soln: Solution<G,P>) -> ();
@@ -17,4 +17,14 @@ pub trait Population<G: Clone + Copy, P: Clone + Copy> {
     fn rem(&mut self, n: &usize) -> ();
     fn inc_age(&mut self) -> ();
     fn clear(&mut self) -> ();
+}
+
+pub trait Genotype<G: Clone + Copy> {
+    fn get(&self) -> &G;
+    fn set(&mut self, other: &G) -> ();
+}
+
+pub trait Phenotype<P: Clone + Copy> {
+    fn get(&self) -> &P;
+    fn set(&mut self, other: &P) -> ();
 }
