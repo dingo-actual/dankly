@@ -34,12 +34,12 @@ impl Terminator for GeneralTerminator {
     fn check(&self) -> bool {
         let progress = self.crnt_fitness - self.last_fitness;
         if self.crnt_iter == self.max_iter {
-            return True;
+            return true;
         }
         match self.progress_atol {
             Some(atol) => {
                 if progress < atol {
-                    return True;
+                    return true;
                 }
             },
             None => {},
@@ -47,7 +47,7 @@ impl Terminator for GeneralTerminator {
         match self.progress_rtol {
             Some(rtol) => {
                 if progress / self.last_fitness < rtol {
-                    return True;
+                    return true;
                 }
             },
             None => {},
@@ -55,7 +55,7 @@ impl Terminator for GeneralTerminator {
         match self.max_age {
             Some(age) => {
                 if self.crnt_age >= age {
-                    return True;
+                    return true;
                 } 
             },
             None => {},
@@ -63,12 +63,12 @@ impl Terminator for GeneralTerminator {
         match self.min_diversity {
             Some(diverse) => {
                 if self.crnt_diversity <= diverse {
-                    return True;
+                    return true;
                 }
             },
             None => {},
         }
-        return False;
+        false
     }
     fn update(&mut self, fitnesses: Vec<f32>, diversity: f32, age: f32) -> () {
         self.crnt_iter = self.crnt_iter + 1;
