@@ -48,7 +48,7 @@ impl Phenotype for Permutation {
 }
 
 impl Permutation {
-    fn new(len: &usize) -> Permutation {
+    fn new_random(len: &usize) -> Permutation {
         let mut rng = thread_rng();
         let mut seq = Vec::with_capacity(len);
         for n in 0..len {
@@ -124,8 +124,8 @@ impl Permutation {
 }
 
 impl SolnIdentPermu {
-    pub fn new(len: &usize) -> SolnIdentPermu {
-        let perm = Permutation::new();
+    pub fn new_random(len: &usize) -> SolnIdentPermu {
+        let perm = Permutation::new_random(len);
         SolnIdentPermu {
             gtype: perm,
             ptype: perm.copy(),
@@ -134,19 +134,17 @@ impl SolnIdentPermu {
     }
 }
 
-// TODO: re-add impl Solution for SolnIdentPermu
-
-impl Solution {
-    fn set_gtype(&mut self, gtype_new: &G) -> () {
+impl Solution for SolnIdentPermu {
+    fn set_gtype(&mut self, gtype_new: &Vec<usize>) -> () {
         self.gtype.set(gtype_new);
     }
-    fn set_ptype(&mut self, ptype_new: &P) -> () {
+    fn set_ptype(&mut self, ptype_new: &Vec<usize>) -> () {
         self.ptype.set(ptype_new);
     }
-    fn get_gtype(&self) -> &G {
+    fn get_gtype(&self) -> &Vec<usize> {
         &self.gtype.get()
     }
-    fn get_ptype(&self) -> &P {
+    fn get_ptype(&self) -> &Vec<usize> {
         &self.ptype.get()
     }
     fn induce_gtype(&mut self) -> () {
@@ -317,7 +315,26 @@ impl SolnIdentRealVec {
     }
 }
 
-// TODO: re-add impl Solution for SolnIdentRealVec
+impl Solution for SolnIdentRealVec {
+    fn set_gtype(&mut self, gtype_new: &Vec<f32>) -> () {
+        self.gtype.set(gtype_new);
+    }
+    fn set_ptype(&mut self, ptype_new: &Vec<f32>) -> () {
+        self.ptype.set(ptype_new);
+    }
+    fn get_gtype(&self) -> &Vec<f32> {
+        &self.gtype.get()
+    }
+    fn get_ptype(&self) -> &Vec<f32> {
+        &self.ptype.get()
+    }
+    fn induce_gtype(&mut self) -> () {
+        self.gtype.set(self.ptype.get().copy());
+    }
+    fn induce_ptype(&mut self) -> () {
+        self.ptype.set(self.gtype.get().copy());
+    }
+}
 
 //bounded real vector
 
@@ -587,7 +604,26 @@ impl SolnIdentBoundedRealVec {
     }
 }
 
-// TODO: re-add impl Solution for SolnIdentBoundedRealVec
+impl Solution for SolnIdentBoundedRealVec {
+    fn set_gtype(&mut self, gtype_new: &Vec<f32>) -> () {
+        self.gtype.set(gtype_new);
+    }
+    fn set_ptype(&mut self, ptype_new: &Vec<f32>) -> () {
+        self.ptype.set(ptype_new);
+    }
+    fn get_gtype(&self) -> &Vec<f32> {
+        &self.gtype.get()
+    }
+    fn get_ptype(&self) -> &Vec<f32> {
+        &self.ptype.get()
+    }
+    fn induce_gtype(&mut self) -> () {
+        self.gtype.set(self.ptype.get().copy());
+    }
+    fn induce_ptype(&mut self) -> () {
+        self.ptype.set(self.gtype.get().copy());
+    }
+}
 
 //binary string
 
@@ -714,6 +750,143 @@ impl SolnIdentBinarySeq {
     }
 }
 
-// TODO: re-add impl Solution for SolnIdentBoundedRealVec
+impl Solution for SolnIdentRealVec {
+    fn set_gtype(&mut self, gtype_new: &Vec<bool>) -> () {
+        self.gtype.set(gtype_new);
+    }
+    fn set_ptype(&mut self, ptype_new: &Vec<bool>) -> () {
+        self.ptype.set(ptype_new);
+    }
+    fn get_gtype(&self) -> &Vec<bool> {
+        &self.gtype.get()
+    }
+    fn get_ptype(&self) -> &Vec<bool> {
+        &self.ptype.get()
+    }
+    fn induce_gtype(&mut self) -> () {
+        self.gtype.set(self.ptype.get().copy());
+    }
+    fn induce_ptype(&mut self) -> () {
+        self.ptype.set(self.gtype.get().copy());
+    }
+}
 
 //categorical sequence
+
+pub struct CategSeq {
+    seq: Vec<usize>,
+    len: usize,
+    n_categories: Vec<usize>,
+}
+
+pub struct SolnIdentCategSeq {
+    gtype: CategSeq,
+    ptype: CategSeq,
+    len: usize,
+    n_categories: Vec<usize>,
+}
+
+impl Genotype for CategSeq {
+    fn get(&self) -> &Vec<usize> {
+        &self.seq
+    }
+    fn set(&self, other: &Vec<usize>) {
+        if other.len() != self.len {
+            panic!("Attempted set with mismatched shapes");
+        }
+        if !CategSeq::check_categories(other, &self.n_categories) {
+            panic!("Attempted set outside category range");
+        }
+        for n in 0..self.len {
+            self.seq[n] = other[n].copy();
+        }
+    }
+}
+
+impl Phenotype for CategSeq {
+    fn get(&self) -> &Vec<usize> {
+        &self.seq
+    }
+    fn set(&self, other: &Vec<usize>) {
+        if other.len() != self.len {
+            panic!("Attempted set with mismatched shapes");
+        }
+        if !CategSeq::check_categories(other, &self.n_categories) {
+            panic!("Attempted set outside category range");
+        }
+        for n in 0..self.len {
+            self.seq[n] = other[n].copy();
+        }
+    }
+}
+
+impl CategSeq {
+    fn check_categories(seq: &Vec<usize>, n_categories: &Vec<usize>) -> bool {
+        for k in seq.iter() {
+            if k < 0 || k >= n_categories[k] {
+                return false;
+            }
+        }
+        true
+    }
+    fn new_from(seq: Vec<usize>, len: &usize, n_categories: &Vec<usize>) -> CategSeq {
+        if seq.len() != len {
+            panic!("Attempted creation from incorrectly sized vector");
+        }
+        if !CategSeq::check_categories(&seq, n_categories) {
+            panic!("Attempted creation outside category range")
+        }
+        CategSeq {
+            seq: seq,
+            len: len,
+            n_categories: n_categories,
+        }
+    }
+    pub fn new_random(len: &usize, n_categories: &Vec<usize>) {
+        let mut rng = thread_rng();
+        let mut seq = Vec::with_capacity(len);
+        let unif = Uniform::new(0, 1);
+        for k in 0..len {
+            let samp = unif.sample(&mut rng);
+            let samp_int = (samp * n_categories[k]).floor() as usize;
+            seq.push(samp_int);
+        }
+        CategSeq::new_from(seq, len, n_categories)
+    }
+}
+
+impl SolnIdentCategSeq {
+    fn new_from(seq: CategSeq, len: &usize, n_categories: &Vec<usize>) {
+        SolnIdentCategSeq {
+            gtype: seq.copy(),
+            ptype: seq.copy(),
+            len: len,
+            n_categories: n_categories.copy(),
+        }
+    }
+    pub fn new_random(len: &usize, n_categories: &Vec<usize>) {
+        let seq = CategSeq::new_random(len, n_categories);
+        SolnIdentCategSeq::new_from(seq, len, n_categories)
+    }
+}
+
+impl Solution for SolnIdentCategSeq {
+    fn set_gtype(&mut self, gtype_new: &Vec<usize>) -> () {
+        self.gtype.set(gtype_new);
+    }
+    fn set_ptype(&mut self, ptype_new: &Vec<usize>) -> () {
+        self.ptype.set(ptype_new);
+    }
+    fn get_gtype(&self) -> &Vec<usize> {
+        &self.gtype.get()
+    }
+    fn get_ptype(&self) -> &Vec<usize> {
+        &self.ptype.get()
+    }
+    fn induce_gtype(&mut self) -> () {
+        self.gtype.set(self.ptype.get().copy());
+    }
+    fn induce_ptype(&mut self) -> () {
+        self.ptype.set(self.gtype.get().copy());
+    }
+}
