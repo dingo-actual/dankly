@@ -15,6 +15,9 @@ impl Population<G, P> for GeneralPopulation {
     fn get(&self, n: &usize) -> &Solution<G,P> {
         &self.solutions[n]
     }
+    fn get_mut(&mut self, n: &usize) -> &mut Solution<G,P> {
+        &mut self.solutions[n]
+    }
     fn set(&mut self, n: &usize, soln: Solution<G,P>) -> () {
         self.solutions[n] = soln;
     }

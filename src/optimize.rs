@@ -2,24 +2,20 @@ use crate::generics::operators::*;
 use crate::generics::population::*;
 use crate::generics::terminator::Terminator;
 
-fn optimize<G: Clone + Copy, P: Clone + Copy>(pop: &Population<G,P>, fitness: &Fitness<G,P>, diversity: &Diversity<G,P>, xover: &Crossover<G,P>, mutate: &Mutation<G,P>, local_search: &LocalSearch<G,P>, select_parents: SelectParents<G,P>, select_survivors: SelectSurvivors<G,P>, term: Terminator<G,P>) -> () {
+fn optimize<G: Clone + Copy, P: Clone + Copy>(pop: &Population<G,P>, fitness: &Fitness<G,P>, diversity: &Diversity<G,P>, xover: &Crossover<G,P>, mutate: &Mutation<G,P>, local_search: &LocalSearch<G,P>, select_survivors: Select, term: Terminator<G,P>) -> () {
     let mut terminate = False;
-    let fitnesses = Vec::new();
+    let mut fitnesses = Vec::new();
     for n in 0..pop.len() {
         fitnesses.push(fitness.eval(pop.get(n)));
     }
     while !terminate {
         let mut new_solutions = Vec::new();
         // select parents
-        let parent_ixs = select_parents.choose(&pop);
+        let parent_ixs = xover.choose(&fitnesses);
         // create new solutions through crossover
-        for ixs in parent_ixs.iter() {
-            let parents = Vec::new();
-            for ix in ixs.iter() {
-                parents.push(pop.get(ix));
-            }
-            let child_vec = xover.crossover(parents);
-            while let Some(child) = child_vec.pop() {
+        let children = xover.crossover_all(&pop, &parent_ixs);
+        for child_vec in children.iter() {
+            for child in child_vec.iter() {
                 new_solutions.push(child);
             }
         }
@@ -27,20 +23,22 @@ fn optimize<G: Clone + Copy, P: Clone + Copy>(pop: &Population<G,P>, fitness: &F
         for solution in new_solutions.iter_mut() {
             mutate.mutate(solution);
         }
-        // perform local search on mutated solutions
-        for solution in new_solutions.iter_mut() {
-            local_search.search(solution);
-        }
         // add new solutions to population
         while let Some(solution) = new_solutions.pop() {
             fitnesses.push(fitness.eval(&solution));
             pop.add(solution);
         }
+        // perform local search on mutated solutions
+        let search_ixs = local_search.choose(&fitnesses);
+        local_search.search_all(&mut pop, &search_ixs);
+        for ix_vec in search_ixs.iter() {
+            fitnesses[ix_vec[0]] = fitness.eval(pop.get(&ix_vec[0]));
+        }
         // choose survivors
         let survivor_ixs = select_survivors.choose(fitnesses);
         let survivors = Vec::new();
-        for ix in survivor_ixs.iter() {
-            survivors.push(pop.get(ix).clone());
+        for ix_vec in survivor_ixs.iter() {
+            survivors.push(*pop.get(ix_vec[0]).copy());
         }
         pop.clear();
         while let Some(survivor) = survivors.pop() {

@@ -7,7 +7,7 @@ use rand_distr::{Normal, Uniform, Distribution};
 
 //permutation
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Permutation {
     seq: Vec<usize>,
     len: usize,
@@ -19,7 +19,7 @@ pub struct SolnIdentPermu {
     len: usize,
 }
 
-impl Genotype for Permutation {
+impl Genotype<Vec<usize>> for Permutation {
     fn get(&self) -> &Vec<usize> {
         &self.seq
     }
@@ -28,12 +28,12 @@ impl Genotype for Permutation {
             panic!("Attempted set with mismatched shapes")
         }
         for n in 0..self.len {
-            self.seq[n] = other[n].copy();
+            self.seq[n] = other[n].clone();
         }
     }
 }
 
-impl Phenotype for Permutation {
+impl Phenotype<Vec<usize>> for Permutation {
     fn get(&self) -> &Vec<usize> {
         &self.seq
     }
@@ -42,10 +42,12 @@ impl Phenotype for Permutation {
             panic!("Attempted set with mismatched shapes")
         }
         for n in 0..self.len {
-            self.seq[n] = other[n].copy();
+            self.seq[n] = other[n].clone();
         }
     }
 }
+
+//TODO: change Result return type to panic instead
 
 impl Permutation {
     fn new_random(len: &usize) -> Permutation {
@@ -60,11 +62,14 @@ impl Permutation {
             len: len,
         }
     }
+    fn get_len(&self) {
+        self.len
+    }
     fn swap(&mut self, ix1: &usize, ix2: &usize) -> Result<&usize, &str> {
         if self.check_bounds(ix1) && self.check_bounds(ix2) {
             if ix1 != ix2 {
-                x1 = self.seq[*ix1].copy();
-                self.seq[*ix1] = self.seq[*ix2].copy();
+                x1 = self.seq[*ix1].clone();
+                self.seq[*ix1] = self.seq[*ix2].clone();
                 self.seq[*ix2] = x1;
                 return Ok(&x1);
             } else {
@@ -128,33 +133,42 @@ impl SolnIdentPermu {
         let perm = Permutation::new_random(len);
         SolnIdentPermu {
             gtype: perm,
-            ptype: perm.copy(),
+            ptype: perm.clone(),
             len: *len,
         }
     }
 }
 
-impl Solution for SolnIdentPermu {
-    fn set_gtype(&mut self, gtype_new: &Vec<usize>) -> () {
-        self.gtype.set(gtype_new);
+impl Solution<Permutation, Permutation> for SolnIdentPermu {
+    fn set_gtype(&mut self, gtype_new: &Permutation) -> () {
+        self.gtype.set(gtype_new.get());
     }
-    fn set_ptype(&mut self, ptype_new: &Vec<usize>) -> () {
-        self.ptype.set(ptype_new);
+    fn set_ptype(&mut self, ptype_new: &Permutation) -> () {
+        self.ptype.set(ptype_new.get());
     }
-    fn get_gtype(&self) -> &Vec<usize> {
-        &self.gtype.get()
+    fn get_gtype(&self) -> &Permutation {
+        &self.gtype
     }
-    fn get_ptype(&self) -> &Vec<usize> {
-        &self.ptype.get()
+    fn get_ptype(&self) -> &Permutation {
+        &self.ptype
+    }
+    fn get_gtype_mut(&mut self) -> &mut Permutation {
+        &mut self.gtype
+    }
+    fn get_ptype_mut(&mut self) -> &mut Permutation {
+        &mut self.ptype
     }
     fn induce_gtype(&mut self) -> () {
-        self.gtype.set(self.ptype.get().copy());
+        self.gtype.set(self.ptype.get().clone());
     }
     fn induce_ptype(&mut self) -> () {
-        self.ptype.set(self.gtype.get().copy());
+        self.ptype.set(self.gtype.get().clone());
     }
 }
 
+
+//TODO: fix Solution implementations
+//TODO: copy -> clone
 
 //real vector
 #[derive(Clone, Copy)]
