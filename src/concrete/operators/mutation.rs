@@ -1,48 +1,82 @@
 use crate::generics::operators::Mutation;
+use crate::generics::population::Genotype;
 use crate::concrete::population::solution::*;
 use rand::thread_rng;
-use rand::distributions::{Bernoulli, Distribution};
-use rand_distr::{Normal, Uniform, Distribution};
+use rand_distr::{Normal, Uniform, Bernoulli, Distribution};
+use ndarray::Array1;
 
-struct TransposeMutator {
-    block_size: usize,
+fn randint(lo: usize, hi: usize) -> usize {
+    let mut rng = thread_rng();
+    let unif = Uniform::new(lo, hi);
+    unif.sample(&mut rng)
 }
 
-impl TransposeMutator {
-    pub fn new(block_size: &usize) -> TransposeMutator {
-        if block_size == 0 {
-            panic!("Cannot have block size zero");
-        }
-        TransposeMutator {
-            block_size: block_size,
-        }
-    }
-    fn get_blocks(&self, max_ix: usize) -> ((usize, usize), (usize, usize)) {
-        let mut rng = thread_rng();
-        let unif = Uniform::new(0, 1);
-        let buf = (unif.sample(&mut rng) * (max_len - 2 * self.block_size + 1)).floor() as usize;
-        let lo = (unif.sample(&mut rng) * (max_len - 2 * self.block_size - buf + 1)).floor() as usize;
-        let hi = lo + self.block_size + buf;
-        ((lo, lo + self.block_size), (hi, hi + block_size))
-    }
+fn get_blocks(block_size: &usize, max_ix: &usize) -> ((usize, usize), (usize, usize)) {
+    let buf = randint(0, max_ix - 2 * block_size + 1);
+    let lo = randint(0, max_ix - 2 * block_size - buf + 1);
+    let hi = lo + block_size + buf;
+    ((lo, lo + block_size), (hi, hi + block_size))
 }
 
-impl Mutation<Permutation, Permutation> for TransposeMutator {
-    fn mutate_solution(&self, soln: &mut Solution<Permutation, Permutation>) -> () {
-        {
-            if self.block_size > soln.len / 2 {
-                panic!("Cannot mutate with given block size");
-            }
-        }
-        let len = soln.get_gtype().get_len().copy();
-        let ((lo1, hi1), (lo2, hi2)) = self.get_blocks(&len);
-        {
-            let perm_g = soln.get_gtype_mut();
-            perm_g.swap_range((&lo1, &hi1), (&lo2, &hi2));
-        }
-        {
-            let perm_p = soln.get_ptype_mut();
-            perm_p.swap_range((&lo1, &hi1), (&lo2, &hi2));
+// mutation for Permutation
+
+fn transpose_mutation_factory(block_size: usize) -> Box<dyn Fn(&mut Permutation) -> ()>{
+    fn transpose_mutation(perm: &mut Permutation, block_size: usize) -> () {
+        let max_ix = perm.get_len().clone();
+        let ((lo1, hi1), (lo2, hi2)) = get_blocks(&block_size, &max_ix);
+        perm.swap_range((&lo1, &hi1), (&lo2, &hi2));
+    }
+    Box::new(move |perm: &mut Permutation| transpose_mutation(perm, block_size))
+}
+
+fn transpose_mutation_op(gtype: &mut Genotype<Permutation>) -> () {
+    let mut block_size;
+    {
+        let sa = gtype.get_sa();
+        block_size = sa.mutation_strength.clone() as usize;
+    }
+    let perm = gtype.get_genes_mut();
+    let op = transpose_mutation_factory(block_size);
+    op(perm);
+}
+
+pub fn get_transpose_mutator() -> Mutation<Permutation> {
+    Mutation{mutation_op: Box::new(transpose_mutation_op)}
+}
+
+// mutation for RealVec
+
+fn normal_vect(mu: f32, sigma: f32, len: usize) -> Array1<f32> {
+    let mut rng = thread_rng();
+    let normal = Normal::new(mu, sigma).unwrap();
+    let mut out_v: Vec<f32> = Vec::with_capacity(len);
+    for n in 0..len {
+        out_v[n] = normal.sample(&mut rng);
+    }
+    Array1::from(out_v)
+}
+
+fn normal_mutation_factory(sigma: f32) -> Box<dyn Fn(&mut Array1<f32>) -> ()> {
+    fn normal_mutation(vect: &mut Array1<f32>, sigma: f32) -> () {
+        let offset = normal_vect(0.0, sigma, vect.len().clone());
+        for n in  0..vect.len() {
+            vect[n] = vect[n] + offset[n];
         }
     }
+    Box::new(move |vect: &mut Array1<f32>| normal_mutation(vect, sigma))
+}
+
+fn normal_mutation_op(gtype: &mut Genotype<Array1<f32>>) -> () {
+    let mut sigma: f32;
+    {
+        let sa = gtype.get_sa();
+        sigma = sa.mutation_strength;
+    }
+    let vect = gtype.get_genes_mut();
+    let op = normal_mutation_factory(sigma);
+    op(vect);
+}
+
+pub fn get_normal_mutator() -> Mutation<Array1<f32>> {
+    Mutation{mutation_op: Box::new(normal_mutation_op)}
 }
