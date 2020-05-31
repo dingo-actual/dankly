@@ -2,7 +2,8 @@ use crate::generics::operators::Mutation;
 use crate::generics::population::Genotype;
 use crate::concrete::population::solution::*;
 use rand::thread_rng;
-use rand_distr::{Normal, Uniform, Bernoulli, Distribution};
+use rand::seq::SliceRandom;
+use rand_distr::{Normal, Uniform, Distribution};
 use ndarray::Array1;
 
 fn randint(lo: usize, hi: usize) -> usize {
@@ -30,7 +31,7 @@ fn transpose_mutation_factory(block_size: usize) -> Box<dyn Fn(&mut Permutation)
 }
 
 fn transpose_mutation_op(gtype: &mut Genotype<Permutation>) -> () {
-    let mut block_size;
+    let block_size;
     {
         let sa = gtype.get_sa();
         block_size = sa.mutation_strength.clone() as usize;
@@ -67,7 +68,7 @@ fn normal_mutation_factory(sigma: f32) -> Box<dyn Fn(&mut Array1<f32>) -> ()> {
 }
 
 fn normal_mutation_op(gtype: &mut Genotype<Array1<f32>>) -> () {
-    let mut sigma: f32;
+    let sigma: f32;
     {
         let sa = gtype.get_sa();
         sigma = sa.mutation_strength;
@@ -79,4 +80,63 @@ fn normal_mutation_op(gtype: &mut Genotype<Array1<f32>>) -> () {
 
 pub fn get_normal_mutator() -> Mutation<Array1<f32>> {
     Mutation{mutation_op: Box::new(normal_mutation_op)}
+}
+
+// mutation for BoundedRealVec
+
+fn bounded_normal_mutation_factory() -> Box<dyn Fn(&mut BoundedRealVec) -> ()> {
+    fn normal_mutation(vect: &mut BoundedRealVec) -> () {
+        let offset = BoundedRealVec::new_normal(&vect.len(), vect.lbound(), vect.ubound());
+        *vect = vect.clone() + offset;
+    }
+    Box::new(move |vect: &mut BoundedRealVec| normal_mutation(vect))
+}
+
+fn bounded_normal_mutation_op(gtype: &mut Genotype<BoundedRealVec>) -> () {
+    let vect = gtype.get_genes_mut();
+    let op = bounded_normal_mutation_factory();
+    op(vect);
+}
+
+pub fn get_bounded_normal_mutator() -> Mutation<BoundedRealVec> {
+    Mutation{mutation_op: Box::new(bounded_normal_mutation_op)}
+}
+
+// mutation for Categorical sequence
+
+fn category_mutation_factory(n: usize) -> Box<dyn Fn(&mut CategSeq) -> ()> {
+    fn change_categories(catseq: &mut CategSeq, n: usize) -> () {
+        if n >= catseq.len() {
+            panic!("Cannot change more than all items in sequence")
+        }
+        let mut ixs: Vec<usize> = Vec::with_capacity(n);
+        for ix in 0..catseq.len() {
+            ixs.push(ix);
+        }
+        let mut rng = thread_rng();
+        ixs.shuffle(&mut rng);
+        for k in 0..n {
+            let ix = ixs[k];
+            let unif = Uniform::new(0, catseq.n_cat(ix));
+            let new_cat = unif.sample(&mut rng);
+            let cat = catseq.get_mut(ix);
+            *cat = new_cat;
+        }
+    }
+    Box::new(move |catseq: &mut CategSeq| change_categories(catseq, n))
+}
+
+fn category_mutation_op(gtype: &mut Genotype<CategSeq>) -> () {
+    let k: usize;
+    {
+        let sa = gtype.get_sa();
+        k = sa.mutation_strength as usize;
+    }
+    let catseq = gtype.get_genes_mut();
+    let op = category_mutation_factory(k);
+    op(catseq);
+}
+
+pub fn get_category_mutator() -> Mutation<CategSeq> {
+    Mutation{mutation_op: Box::new(category_mutation_op)}
 }

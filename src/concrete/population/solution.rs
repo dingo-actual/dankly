@@ -97,6 +97,18 @@ pub struct BoundedRealVec {
     lbounds: Array1<f32>,
 }
 
+impl BoundedRealVec {
+    pub fn len(&self) -> usize {
+        self.len
+    }
+    pub fn lbound(&self) -> &Array1<f32> {
+        &self.lbounds
+    }
+    pub fn ubound(&self) -> &Array1<f32> {
+        &self.ubounds
+    }
+}
+
 impl Add<BoundedRealVec> for BoundedRealVec {
     type Output = BoundedRealVec;
 
@@ -279,6 +291,18 @@ pub struct CategSeq {
 }
 
 impl CategSeq {
+    pub fn get(&self, n: usize) -> &usize {
+        &self.seq[n]
+    }
+    pub fn get_mut(&mut self, n: usize) -> &mut usize {
+        &mut self.seq[n]
+    }
+    pub fn len(&self) -> usize {
+        self.len
+    }
+    pub fn n_cat(&self, n: usize) -> usize {
+        self.n_categories[n]
+    }
     fn check_categories(seq: &Array1<usize>, n_categories: &Array1<usize>) -> bool {
         for (ix, k) in seq.iter().enumerate() {
             if *k >= n_categories[ix] {
