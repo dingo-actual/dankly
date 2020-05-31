@@ -107,7 +107,7 @@ pub fn get_bounded_normal_mutator() -> Mutation<BoundedRealVec> {
 fn category_mutation_factory(n: usize) -> Box<dyn Fn(&mut CategSeq) -> ()> {
     fn change_categories(catseq: &mut CategSeq, n: usize) -> () {
         if n >= catseq.len() {
-            panic!("Cannot change more than all items in sequence")
+            panic!("Cannot change more than all items in sequence");
         }
         let mut ixs: Vec<usize> = Vec::with_capacity(n);
         for ix in 0..catseq.len() {
@@ -140,3 +140,41 @@ fn category_mutation_op(gtype: &mut Genotype<CategSeq>) -> () {
 pub fn get_category_mutator() -> Mutation<CategSeq> {
     Mutation{mutation_op: Box::new(category_mutation_op)}
 }
+
+// mutation for Binary sequence
+
+fn binseq_mutation_factory(n: usize) -> Box<dyn Fn(&mut Array1<bool>) -> ()> {
+    fn flip_bits(binseq: &mut Array1<bool>, n: usize) -> () {
+        if n >= binseq.len() {
+            panic!("Cannot flip more than all bits in sequence");
+        }
+        let mut ixs: Vec<usize> = Vec::with_capacity(n);
+        for ix in 0..binseq.len() {
+            ixs.push(ix);
+        }
+        let mut rng = thread_rng();
+        ixs.shuffle(&mut rng);
+        for k in 0..n {
+            let ix = ixs[k];
+            binseq[ix] = !binseq[ix];
+        }
+    }
+    Box::new(move |binseq: &mut Array1<bool>| flip_bits(binseq, n))
+}
+
+fn binseq_mutation_op(gtype: &mut Genotype<Array1<bool>>) -> () {
+    let k: usize;
+    {
+        let sa = gtype.get_sa();
+        k = sa.mutation_strength as usize;
+    }
+    let binseq = gtype.get_genes_mut();
+    let op = binseq_mutation_factory(k);
+    op(binseq);
+}
+
+pub fn get_binseq_mutator() -> Mutation<Array1<bool>> {
+    Mutation{mutation_op: Box::new(binseq_mutation_op)}
+}
+
+// TODO: implement null mutation (generic)
