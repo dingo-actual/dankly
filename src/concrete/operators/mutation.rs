@@ -177,4 +177,8 @@ pub fn get_binseq_mutator() -> Mutation<Array1<bool>> {
     Mutation{mutation_op: Box::new(binseq_mutation_op)}
 }
 
-// TODO: implement null mutation (generic)
+// null mutation (generic)
+
+pub fn get_null_mutator<G: Clone>() -> Mutation<Genotype<G>> {
+    Mutation{mutation_op: Box::new(|_| ())}
+}
