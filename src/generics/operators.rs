@@ -3,7 +3,7 @@ use rand::thread_rng;
 use rand_distr::{Uniform, Distribution};
 
 pub struct Crossover<G: Clone, P: Clone> {
-    chooser: Box<dyn Fn(&Vec<&f32>) -> Vec<Vec<usize>>>,
+    chooser: Box<dyn Fn(&Vec<f32>) -> Vec<Vec<usize>>>,
     crossover: Box<dyn Fn(&Vec<&Solution<G, P>>) -> Vec<Solution<G,P>>>,
 }
 
@@ -27,7 +27,7 @@ impl <G: Clone, P: Clone> Crossover<G,P> {
 }
 
 pub struct LocalSearch<G: Clone, P: Clone> {
-    chooser: Box<dyn Fn(&Vec<&f32>) -> (Vec<usize>, Vec<Vec<usize>>)>,
+    chooser: Box<dyn Fn(&Vec<f32>) -> (Vec<usize>, Vec<Vec<usize>>)>,
     search: Box<dyn Fn(&mut Solution<G, P>, &Vec<&Solution<G,P>>) -> ()>,
 }
 
@@ -72,7 +72,7 @@ impl<G: Clone> Mutation<G> {
 }
 
 pub struct Selector {
-    select_fn: Box<dyn Fn(&Vec<&f32>) -> Vec<usize>>,
+    select_fn: Box<dyn Fn(&Vec<f32>) -> Vec<usize>>,
 }
 
 impl Selector {

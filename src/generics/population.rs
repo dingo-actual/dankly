@@ -136,8 +136,8 @@ impl <G: Clone, P: Clone> Solution<G,P> {
     pub fn get_ptype_mut(&mut self) -> &mut P {
         &mut self.phenotype
     }
-    pub fn get_fitness(&self) -> &f32 {
-        &self.fitness
+    pub fn get_fitness(&self) -> f32 {
+        self.fitness
     }
     pub fn get_fitness_mut(&mut self) -> &mut f32 {
         &mut self.fitness
@@ -180,7 +180,7 @@ impl <G: Clone, P: Clone> Population<G,P> {
     pub fn rem(&mut self, n: &usize) -> () {
         self.solutions.remove(*n);
     }
-    pub fn get_fitnesses(&self) -> Vec<&f32> {
+    pub fn get_fitnesses(&self) -> Vec<f32> {
         let mut out = Vec::new();
         for n in 0..self.len() {
             out.push(self.get(&n).get_fitness());
